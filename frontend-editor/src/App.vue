@@ -1,7 +1,16 @@
 <template>
   <div class="app">
     <Toolbar @action="handleToolbarAction" />
-    <EditorPane ref="editorPane" @ready="onEditorReady" />
+    <div class="editor-area">
+      <EditorPane ref="editorPane" @ready="onEditorReady" @update="onEditorUpdate" />
+      <SearchPanel
+        v-if="searchOpen && editorView"
+        ref="searchPanel"
+        :view="editorView"
+        @close="closeSearch"
+        @notify="showToast"
+      />
+    </div>
     <StatusBar />
     <Transition name="toast">
       <div v-if="toast.visible" :class="['toast', `toast--${toast.type}`]">
@@ -12,12 +21,15 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import Toolbar from '@/components/Toolbar.vue'
 import EditorPane from '@/components/EditorPane.vue'
+import SearchPanel from '@/components/SearchPanel.vue'
 import StatusBar from '@/components/StatusBar.vue'
 
 const editorPane = ref(null)
+const searchPanel = ref(null)
+const searchOpen = ref(false)
 let editorView = null
 
 const toast = reactive({ visible: false, message: '', type: 'info' })
@@ -30,6 +42,41 @@ function showToast(msg, type = 'info') {
 }
 
 function onEditorReady(view) { editorView = view }
+
+// Keep the panel's match counter in sync with every editor transaction
+// (typing, undo, replacements) — positions are re-read from live state.
+function onEditorUpdate() { searchPanel.value?.refresh() }
+
+function openSearch() {
+  if (searchOpen.value) {
+    // Already open — just re-focus and re-select the query.
+    searchPanel.value?.focusSearch()
+  } else {
+    searchOpen.value = true // the panel focuses itself on mount
+  }
+}
+
+function closeSearch() {
+  if (!searchOpen.value) return
+  searchOpen.value = false
+  // Hand focus back to the editor; the selection stays on the current
+  // match and the query persists, so F3 / reopening resumes from here.
+  editorView?.focus()
+}
+
+// App-level shortcuts, registered on window so they work no matter
+// whether focus is in the editor or inside the search panel.
+function onGlobalKeydown(e) {
+  if ((e.metaKey || e.ctrlKey) && (e.key === 'f' || e.key === 'F')) {
+    e.preventDefault()
+    openSearch()
+  } else if (e.key === 'Escape' && searchOpen.value) {
+    closeSearch()
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onGlobalKeydown, true))
+onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKeydown, true))
 
 function insertText(before, after = '') {
   if (!editorView) return
@@ -67,6 +114,7 @@ function handleToolbarAction(action) {
       editorView.dispatch({ changes: { from: line.to, to: line.to, insert: '\n\n---\n\n' } })
       editorView.focus()
     },
+    search: () => openSearch(),
   }
   const fn = map[action]
   fn ? fn() : showToast(`未知操作: ${action}`, 'warning')
@@ -79,6 +127,13 @@ function handleToolbarAction(action) {
   flex-direction: column;
   height: 100vh;
   background: $bg;
+}
+
+.editor-area {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 0;
 }
 
 .toast {

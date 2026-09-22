@@ -4,8 +4,15 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '@codemirror/language'
+import { search, highlightSelectionMatches, findNext, findPrevious, getSearchQuery } from '@codemirror/search'
 import { editorBaseTheme } from './theme'
 import { markdownDecorationPlugin } from './decoration-plugin'
+
+// The raw find commands fall back to opening CodeMirror's default panel
+// when the query is empty/invalid. Guard them so only our Vue panel is
+// ever shown; with no usable query the key simply falls through.
+const findNextIfValid = (view) => (getSearchQuery(view.state).valid ? findNext(view) : false)
+const findPreviousIfValid = (view) => (getSearchQuery(view.state).valid ? findPrevious(view) : false)
 
 const defaultContent = `# Welcome to MD Live Editor
 
@@ -74,10 +81,19 @@ export function createEditor(parent, options = {}) {
 
     // Keymaps
     keymap.of([
+      // Find & replace navigation — works even when the search panel is
+      // closed, because the query persists in the editor state. Returning
+      // false (no query / no matches) lets the key fall through untouched.
+      { key: 'F3', run: findNextIfValid, shift: findPreviousIfValid, preventDefault: true },
+      { key: 'Mod-g', run: findNextIfValid, shift: findPreviousIfValid, preventDefault: true },
       ...defaultKeymap,
       ...historyKeymap,
       indentWithTab
     ]),
+
+    // Search state + match highlighting (the panel UI lives in SearchPanel.vue)
+    search(),
+    highlightSelectionMatches(),
 
     // Markdown language support (for syntax tree)
     markdown({

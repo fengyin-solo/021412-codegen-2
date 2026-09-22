@@ -53,6 +53,9 @@ const actionGroups = [
     { id: 'ordered-list', title: '有序列表', icon: I('<line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>') },
     { id: 'hr', title: '分割线', icon: I('<line x1="2" y1="12" x2="22" y2="12"/>') },
   ],
+  [
+    { id: 'search', title: '查找与替换 (Ctrl+F)', icon: I('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>') },
+  ],
 ]
 </script>
 
