@@ -10,7 +10,7 @@ import { useEditorStore } from '@/stores/editor'
 const editorContainer = ref(null)
 const store = useEditorStore()
 let editorView = null
-const emit = defineEmits(['ready'])
+const emit = defineEmits(['ready', 'update', 'open-search'])
 
 onMounted(() => {
   if (!editorContainer.value) return
@@ -22,6 +22,10 @@ onMounted(() => {
         const line = update.state.doc.lineAt(pos)
         store.updateCursor(line.number, pos - line.from + 1)
       }
+      emit('update')
+    },
+    onOpenSearch() {
+      emit('open-search')
     }
   })
   store.updateContent(editorView.state.doc.toString())

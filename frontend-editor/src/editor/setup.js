@@ -4,7 +4,8 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '@codemirror/language'
-import { editorBaseTheme } from './theme'
+import { search, findNext, findPrevious } from '@codemirror/search'
+import { editorBaseTheme, searchHighlightTheme } from './theme'
 import { markdownDecorationPlugin } from './decoration-plugin'
 
 const defaultContent = `# Welcome to MD Live Editor
@@ -58,10 +59,11 @@ Happy writing! ✨
  * @param {Object} [options]
  * @param {string} [options.doc] - Initial document content
  * @param {function} [options.onUpdate] - Callback for editor updates
+ * @param {function} [options.onOpenSearch] - Callback to open the find & replace panel
  * @returns {EditorView}
  */
 export function createEditor(parent, options = {}) {
-  const { doc, onUpdate } = options
+  const { doc, onUpdate, onOpenSearch } = options
 
   const extensions = [
     // Core
@@ -72,8 +74,18 @@ export function createEditor(parent, options = {}) {
     bracketMatching(),
     EditorView.lineWrapping,
 
+    // Find & replace: match highlighting + query state (UI 由 Vue 面板提供)
+    search(),
+    searchHighlightTheme,
+
     // Keymaps
     keymap.of([
+      { key: 'Mod-f', run: () => { onOpenSearch?.(); return true } },
+      // 面板关闭后仍可在编辑器内继续查找（查询持久保存在 state 中）
+      { key: 'Mod-g', run: findNext },
+      { key: 'F3', run: findNext },
+      { key: 'Shift-Mod-g', run: findPrevious },
+      { key: 'Shift-F3', run: findPrevious },
       ...defaultKeymap,
       ...historyKeymap,
       indentWithTab
